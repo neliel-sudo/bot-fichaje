@@ -18,7 +18,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 /* =========================
-   CLIENT
+   CLIENTE DISCORD
 ========================= */
 
 const client = new Client({
@@ -26,32 +26,7 @@ const client = new Client({
 });
 
 /* =========================
-   READY
-========================= */
-
-client.on('ready', () => {
-    console.log(`Bot conectado como ${client.user.tag}`);
-});
-
-/* =========================
-   HORA ESPAÑA (FIX REAL)
-========================= */
-
-function horaEspaña(ms) {
-    return new Intl.DateTimeFormat('es-ES', {
-        timeZone: 'Europe/Madrid',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    }).format(new Date(ms));
-}
-
-/* =========================
-   DATABASE
+   BASE DE DATOS
 ========================= */
 
 const db = new Database('fichajes.db');
@@ -66,6 +41,17 @@ CREATE TABLE IF NOT EXISTS usuarios (
 `).run();
 
 /* =========================
+   HORA ESPAÑA 🇪🇸
+========================= */
+
+function horaEspaña(ms) {
+    return new Date(ms).toLocaleString('es-ES', {
+        timeZone: 'Europe/Madrid',
+        hour12: false
+    });
+}
+
+/* =========================
    SEMANA
 ========================= */
 
@@ -77,18 +63,18 @@ function getWeekNumber() {
 }
 
 /* =========================
-   TIEMPO
+   FORMATO TIEMPO
 ========================= */
 
 function formatTiempo(ms) {
     const horas = Math.floor(ms / 3600000);
     const minutos = Math.floor((ms % 3600000) / 60000);
     const segundos = Math.floor((ms % 60000) / 1000);
-    return `${horas}h ${minutos}m ${segundos}s`;
+    return `${horas} horas, ${minutos} minutos y ${segundos} segundos`;
 }
 
 /* =========================
-   SLASH COMMAND
+   COMANDO
 ========================= */
 
 const command = new SlashCommandBuilder()
@@ -98,19 +84,14 @@ const command = new SlashCommandBuilder()
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
-    try {
-        await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-            { body: [command.toJSON()] }
-        );
-        console.log('Slash command registrado');
-    } catch (err) {
-        console.error('Error registrando comando:', err);
-    }
+    await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+        { body: [command.toJSON()] }
+    );
 })();
 
 /* =========================
-   LOGICA PRINCIPAL
+   LOGICA
 ========================= */
 
 client.on('interactionCreate', async interaction => {
@@ -139,11 +120,10 @@ client.on('interactionCreate', async interaction => {
             embeds: [
                 new EmbedBuilder()
                     .setColor('Green')
-                    .setTitle('⏱️ Fichaje')
+                    .setTitle('⏱️ Registro de fichaje')
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
-                        `🟢 Entrada registrada\n` +
-                        `📅 ${horaEspaña(ahora)}`
+                        `🟢 Entrada: ${horaEspaña(ahora)}`
                     )
             ]
         });
@@ -178,7 +158,7 @@ client.on('interactionCreate', async interaction => {
             embeds: [
                 new EmbedBuilder()
                     .setColor('Blue')
-                    .setTitle('⏱️ Fichaje')
+                    .setTitle('⏱️ Registro de fichaje')
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
                         `🟢 Entrada: ${horaEspaña(row.entrada)}\n` +
@@ -204,11 +184,10 @@ client.on('interactionCreate', async interaction => {
         embeds: [
             new EmbedBuilder()
                 .setColor('Green')
-                .setTitle('⏱️ Fichaje')
+                .setTitle('⏱️ Registro de fichaje')
                 .setDescription(
                     `👤 ${interaction.user.tag}\n\n` +
-                    `🟢 Entrada registrada\n` +
-                    `📅 ${horaEspaña(ahora)}`
+                    `🟢 Entrada: ${horaEspaña(ahora)}`
                 )
         ]
     });
