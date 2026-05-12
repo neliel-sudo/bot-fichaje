@@ -18,11 +18,19 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 /* =========================
-   DISCORD CLIENT
+   CLIENT
 ========================= */
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
+});
+
+/* =========================
+   READY EVENT
+========================= */
+
+client.on('ready', () => {
+    console.log(`Bot conectado como ${client.user.tag}`);
 });
 
 /* =========================
@@ -59,7 +67,7 @@ function formatTiempo(ms) {
     const horas = Math.floor(ms / 3600000);
     const minutos = Math.floor((ms % 3600000) / 60000);
     const segundos = Math.floor((ms % 60000) / 1000);
-    return `${horas} horas, ${minutos} minutos y ${segundos} segundos`;
+    return `${horas}h ${minutos}m ${segundos}s`;
 }
 
 /* =========================
@@ -80,12 +88,12 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
         );
         console.log('Slash command registrado');
     } catch (err) {
-        console.error(err);
+        console.error('Error registrando comando:', err);
     }
 })();
 
 /* =========================
-   LOGICA
+   LOGICA PRINCIPAL
 ========================= */
 
 client.on('interactionCreate', async interaction => {
@@ -114,9 +122,9 @@ client.on('interactionCreate', async interaction => {
             embeds: [
                 new EmbedBuilder()
                     .setColor('Green')
-                    .setTitle('⏱️ Registro de fichaje')
+                    .setTitle('⏱️ Fichaje')
                     .setDescription(
-                        `👤 Usuario: ${interaction.user.tag}\n\n` +
+                        `👤 ${interaction.user.tag}\n\n` +
                         `🟢 Entrada registrada\n` +
                         `📅 ${new Date(ahora).toLocaleString()}`
                     )
@@ -153,12 +161,12 @@ client.on('interactionCreate', async interaction => {
             embeds: [
                 new EmbedBuilder()
                     .setColor('Blue')
-                    .setTitle('⏱️ Registro de fichaje')
+                    .setTitle('⏱️ Fichaje')
                     .setDescription(
-                        `👤 Usuario: ${interaction.user.tag}\n\n` +
+                        `👤 ${interaction.user.tag}\n\n` +
                         `🟢 Entrada: ${new Date(row.entrada).toLocaleString()}\n` +
                         `🔴 Salida: ${new Date(ahora).toLocaleString()}\n\n` +
-                        `⏱ Tiempo trabajado: ${formatTiempo(duracion)}\n` +
+                        `⏱ Tiempo: ${formatTiempo(duracion)}\n` +
                         `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
                     )
             ]
@@ -179,9 +187,9 @@ client.on('interactionCreate', async interaction => {
         embeds: [
             new EmbedBuilder()
                 .setColor('Green')
-                .setTitle('⏱️ Registro de fichaje')
+                .setTitle('⏱️ Fichaje')
                 .setDescription(
-                    `👤 Usuario: ${interaction.user.tag}\n\n` +
+                    `👤 ${interaction.user.tag}\n\n` +
                     `🟢 Entrada registrada\n` +
                     `📅 ${new Date(ahora).toLocaleString()}`
                 )
