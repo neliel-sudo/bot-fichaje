@@ -13,7 +13,7 @@ const sqlite3 = require('sqlite3').verbose();
    CONFIGURACIÓN
 ========================= */
 
-const TOKEN = 'MTUwMzc2OTg2NzQxMTUyMTY1Nw.GG0tca.0QstBBTp_2NUDKbi3ewauP5ll3nQPfpyWSe5ms';
+const TOKEN = 'MTUwMzc2OTg2NzQxMTUyMTY1Nw.Gnp3oL.BntQrN5_PFNlxBhhCgp5Ia6SXdJZnd_Kjust_E';
 const CLIENT_ID = '1503769867411521657';
 const GUILD_ID = '1435353401646121114';
 
