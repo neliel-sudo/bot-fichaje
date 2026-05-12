@@ -41,14 +41,28 @@ CREATE TABLE IF NOT EXISTS usuarios (
 `).run();
 
 /* =========================
-   HORA ESPAÑA 🇪🇸
+   HORA ESPAÑA 🇪🇸 (BONITA)
 ========================= */
 
 function horaEspaña(ms) {
-    return new Date(ms).toLocaleString('es-ES', {
+    const d = new Date(ms);
+
+    const fecha = new Intl.DateTimeFormat('es-ES', {
         timeZone: 'Europe/Madrid',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(d);
+
+    const hora = new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
         hour12: false
-    });
+    }).format(d);
+
+    return `📅 ${fecha}\n🕒 ${hora}`;
 }
 
 /* =========================
@@ -123,7 +137,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('⏱️ Registro de fichaje')
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
-                        `🟢 Entrada: ${horaEspaña(ahora)}`
+                        `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
                     )
             ]
         });
@@ -161,8 +175,10 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('⏱️ Registro de fichaje')
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
-                        `🟢 Entrada: ${horaEspaña(row.entrada)}\n` +
-                        `🔴 Salida: ${horaEspaña(ahora)}\n\n` +
+
+                        `🟢 Entrada:\n${horaEspaña(row.entrada)}\n\n` +
+                        `🔴 Salida:\n${horaEspaña(ahora)}\n\n` +
+
                         `⏱ Tiempo trabajado: ${formatTiempo(duracion)}\n` +
                         `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
                     )
@@ -187,7 +203,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('⏱️ Registro de fichaje')
                 .setDescription(
                     `👤 ${interaction.user.tag}\n\n` +
-                    `🟢 Entrada: ${horaEspaña(ahora)}`
+                    `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
                 )
         ]
     });
