@@ -26,12 +26,22 @@ const client = new Client({
 });
 
 /* =========================
-   READY EVENT
+   READY
 ========================= */
 
 client.on('ready', () => {
     console.log(`Bot conectado como ${client.user.tag}`);
 });
+
+/* =========================
+   HORA ESPAÑA
+========================= */
+
+function horaEspaña(ms) {
+    return new Date(ms).toLocaleString('es-ES', {
+        timeZone: 'Europe/Madrid'
+    });
+}
 
 /* =========================
    DATABASE
@@ -60,7 +70,7 @@ function getWeekNumber() {
 }
 
 /* =========================
-   FORMATO TIEMPO
+   TIEMPO
 ========================= */
 
 function formatTiempo(ms) {
@@ -88,12 +98,12 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
         );
         console.log('Slash command registrado');
     } catch (err) {
-        console.error('Error registrando comando:', err);
+        console.error(err);
     }
 })();
 
 /* =========================
-   LOGICA PRINCIPAL
+   LOGICA
 ========================= */
 
 client.on('interactionCreate', async interaction => {
@@ -126,7 +136,7 @@ client.on('interactionCreate', async interaction => {
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
                         `🟢 Entrada registrada\n` +
-                        `📅 ${new Date(ahora).toLocaleString()}`
+                        `📅 ${horaEspaña(ahora)}`
                     )
             ]
         });
@@ -164,8 +174,8 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('⏱️ Fichaje')
                     .setDescription(
                         `👤 ${interaction.user.tag}\n\n` +
-                        `🟢 Entrada: ${new Date(row.entrada).toLocaleString()}\n` +
-                        `🔴 Salida: ${new Date(ahora).toLocaleString()}\n\n` +
+                        `🟢 Entrada: ${horaEspaña(row.entrada)}\n` +
+                        `🔴 Salida: ${horaEspaña(ahora)}\n\n` +
                         `⏱ Tiempo: ${formatTiempo(duracion)}\n` +
                         `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
                     )
@@ -191,7 +201,7 @@ client.on('interactionCreate', async interaction => {
                 .setDescription(
                     `👤 ${interaction.user.tag}\n\n` +
                     `🟢 Entrada registrada\n` +
-                    `📅 ${new Date(ahora).toLocaleString()}`
+                    `📅 ${horaEspaña(ahora)}`
                 )
         ]
     });
