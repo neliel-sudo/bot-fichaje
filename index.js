@@ -13,9 +13,9 @@ const sqlite3 = require('sqlite3').verbose();
    CONFIGURACIÓN
 ========================= */
 
-const TOKEN = process.env.MTUwMzc2OTg2NzQxMTUyMTY1Nw.GREO3p.xzUjTts9OeuNbB8c6IqzRG7RyDJooryMu9O9aI;
-const CLIENT_ID = process.env.1503769867411521657;
-const GUILD_ID = process.env.1435353401646121114;
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 
 /* ========================= */
 
