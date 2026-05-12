@@ -34,13 +34,20 @@ client.on('ready', () => {
 });
 
 /* =========================
-   HORA ESPAÑA
+   HORA ESPAÑA (FIX REAL)
 ========================= */
 
 function horaEspaña(ms) {
-    return new Date(ms).toLocaleString('es-ES', {
-        timeZone: 'Europe/Madrid'
-    });
+    return new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).format(new Date(ms));
 }
 
 /* =========================
@@ -98,12 +105,12 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
         );
         console.log('Slash command registrado');
     } catch (err) {
-        console.error(err);
+        console.error('Error registrando comando:', err);
     }
 })();
 
 /* =========================
-   LOGICA
+   LOGICA PRINCIPAL
 ========================= */
 
 client.on('interactionCreate', async interaction => {
@@ -176,7 +183,7 @@ client.on('interactionCreate', async interaction => {
                         `👤 ${interaction.user.tag}\n\n` +
                         `🟢 Entrada: ${horaEspaña(row.entrada)}\n` +
                         `🔴 Salida: ${horaEspaña(ahora)}\n\n` +
-                        `⏱ Tiempo: ${formatTiempo(duracion)}\n` +
+                        `⏱ Tiempo trabajado: ${formatTiempo(duracion)}\n` +
                         `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
                     )
             ]
