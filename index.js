@@ -1,3 +1,5 @@
+require('dotenv').config(); // 🔥 IMPORTANTE si usas .env
+
 const {
     Client,
     GatewayIntentBits,
@@ -16,6 +18,11 @@ const Database = require('better-sqlite3');
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
+
+/* 🔥 DEBUG CRÍTICO (quita esto luego si quieres) */
+console.log("TOKEN existe:", !!TOKEN);
+console.log("CLIENT_ID:", CLIENT_ID);
+console.log("GUILD_ID:", GUILD_ID);
 
 /* =========================
    CLIENTE DISCORD
@@ -45,7 +52,6 @@ CREATE TABLE IF NOT EXISTS usuarios (
 ========================= */
 
 function horaEspaña(ms) {
-
     const d = new Date(ms);
 
     const fecha = new Intl.DateTimeFormat('es-ES', {
@@ -67,27 +73,18 @@ function horaEspaña(ms) {
 }
 
 /* =========================
-   NUMERO SEMANA
+   SEMANA
 ========================= */
 
 function getWeekNumber() {
-
     const date = new Date();
-
-    const firstDay = new Date(
-        date.getFullYear(),
-        0,
-        1
-    );
+    const firstDay = new Date(date.getFullYear(), 0, 1);
 
     const days = Math.floor(
-        (date - firstDay) /
-        (24 * 60 * 60 * 1000)
+        (date - firstDay) / (24 * 60 * 60 * 1000)
     );
 
-    return Math.ceil(
-        (days + firstDay.getDay() + 1) / 7
-    );
+    return Math.ceil((days + firstDay.getDay() + 1) / 7);
 }
 
 /* =========================
@@ -95,16 +92,9 @@ function getWeekNumber() {
 ========================= */
 
 function formatTiempo(ms) {
-
     const horas = Math.floor(ms / 3600000);
-
-    const minutos = Math.floor(
-        (ms % 3600000) / 60000
-    );
-
-    const segundos = Math.floor(
-        (ms % 60000) / 1000
-    );
+    const minutos = Math.floor((ms % 3600000) / 60000);
+    const segundos = Math.floor((ms % 60000) / 1000);
 
     return `${horas} horas, ${minutos} minutos y ${segundos} segundos`;
 }
@@ -129,20 +119,18 @@ const horasCommand = new SlashCommandBuilder()
    REGISTRO COMANDOS
 ========================= */
 
-const rest = new REST({ version: '10' })
-    .setToken(TOKEN);
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
-
     try {
+        if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
+            throw new Error("❌ Faltan variables de entorno (TOKEN, CLIENT_ID, GUILD_ID)");
+        }
 
         console.log('Registrando comandos...');
 
         await rest.put(
-            Routes.applicationGuildCommands(
-                CLIENT_ID,
-                GUILD_ID
-            ),
+            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
             {
                 body: [
                     ficharCommand.toJSON(),
@@ -153,12 +141,9 @@ const rest = new REST({ version: '10' })
         );
 
         console.log('Comandos registrados.');
-
     } catch (err) {
-
-        console.error(err);
+        console.error("❌ Error registrando comandos:", err);
     }
-
 })();
 
 /* =========================
@@ -166,31 +151,20 @@ const rest = new REST({ version: '10' })
 ========================= */
 
 client.on('interactionCreate', async interaction => {
-
     if (!interaction.isChatInputCommand()) return;
-
-    if (
-        interaction.commandName !== 'fichar' &&
-        interaction.commandName !== 'estado' &&
-        interaction.commandName !== 'comprobar-horas-semanales'
-    ) return;
 
     const userId = interaction.user.id;
     const ahora = Date.now();
     const semanaActual = getWeekNumber();
 
     /* =========================
-       COMANDO ESTADO
+       ESTADO
     ========================= */
 
     if (interaction.commandName === 'estado') {
-
-        const usuarios = db.prepare(
-            'SELECT * FROM usuarios'
-        ).all();
+        const usuarios = db.prepare('SELECT * FROM usuarios').all();
 
         if (!usuarios.length) {
-
             return interaction.reply({
                 content: 'No hay usuarios registrados.',
                 ephemeral: true
@@ -201,7 +175,6 @@ client.on('interactionCreate', async interaction => {
         let libres = '';
 
         for (const user of usuarios) {
-
             let total = Number(user.totalSemanal);
 
             if (user.semana !== semanaActual) {
@@ -209,27 +182,12 @@ client.on('interactionCreate', async interaction => {
             }
 
             if (user.entrada) {
-
                 total += (ahora - user.entrada);
 
-                trabajando +=
-                    `🟢 <@${user.userId}>\n` +
-                    `⏱ ${formatTiempo(total)}\n\n`;
-
+                trabajando += `🟢 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
             } else {
-
-                libres +=
-                    `🔴 <@${user.userId}>\n` +
-                    `⏱ ${formatTiempo(total)}\n\n`;
+                libres += `🔴 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
             }
-        }
-
-        if (!trabajando) {
-            trabajando = 'Nadie trabajando';
-        }
-
-        if (!libres) {
-            libres = 'Todos trabajando';
         }
 
         return interaction.reply({
@@ -238,16 +196,8 @@ client.on('interactionCreate', async interaction => {
                     .setColor('Orange')
                     .setTitle('📊 Estado del personal')
                     .addFields(
-                        {
-                            name: '🟢 En servicio',
-                            value: trabajando,
-                            inline: true
-                        },
-                        {
-                            name: '🔴 Fuera de servicio',
-                            value: libres,
-                            inline: true
-                        }
+                        { name: '🟢 En servicio', value: trabajando || 'Nadie trabajando', inline: true },
+                        { name: '🔴 Fuera de servicio', value: libres || 'Todos trabajando', inline: true }
                     )
                     .setTimestamp()
             ]
@@ -255,143 +205,35 @@ client.on('interactionCreate', async interaction => {
     }
 
     /* =========================
-       COMPROBAR HORAS
-    ========================= */
-
-    if (
-        interaction.commandName ===
-        'comprobar-horas-semanales'
-    ) {
-
-        const usuarios = db.prepare(
-            'SELECT * FROM usuarios'
-        ).all();
-
-        if (!usuarios.length) {
-
-            return interaction.reply({
-                content: 'No hay empleados registrados.',
-                ephemeral: true
-            });
-        }
-
-        let descripcion = '';
-
-        for (const user of usuarios) {
-
-            let total = Number(user.totalSemanal);
-
-            if (user.semana !== semanaActual) {
-                total = 0;
-            }
-
-            let estado = '🔴 Fuera de servicio.';
-
-            if (user.entrada) {
-
-                total += (ahora - user.entrada);
-
-                estado = '🟢 En servicio.';
-            }
-
-            let nombre = `Usuario ${user.userId}`;
-
-            try {
-
-                const miembro =
-                    await interaction.guild.members.fetch(
-                        user.userId
-                    );
-
-                nombre = miembro.user.username;
-
-            } catch (err) {}
-
-            descripcion +=
-                `## ${nombre}\n` +
-                `> **Estado:** ${estado}\n` +
-                `> **Horas semanales totales:** ${formatTiempo(total)}.\n\n`;
-        }
-
-        const embed = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle(
-                'Horas semanales de los empleados de Los Santos Custom'
-            )
-            .setDescription(descripcion)
-            .setFooter({
-                text: `Total empleados: ${usuarios.length}`
-            })
-            .setTimestamp();
-
-        return interaction.reply({
-            embeds: [embed]
-        });
-    }
-
-    /* =========================
        FICHAR
     ========================= */
 
-    let row = db.prepare(
-        'SELECT * FROM usuarios WHERE userId = ?'
-    ).get(userId);
-
-    /* =========================
-       PRIMERA VEZ
-    ========================= */
+    let row = db.prepare('SELECT * FROM usuarios WHERE userId = ?').get(userId);
 
     if (!row) {
-
         db.prepare(`
-            INSERT INTO usuarios(
-                userId,
-                entrada,
-                totalSemanal,
-                semana
-            )
+            INSERT INTO usuarios(userId, entrada, totalSemanal, semana)
             VALUES (?, ?, 0, ?)
-        `).run(
-            userId,
-            ahora,
-            semanaActual
-        );
+        `).run(userId, ahora, semanaActual);
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
                     .setColor('Green')
                     .setTitle('⏱️ Registro de fichaje')
-                    .setDescription(
-                        `👤 ${interaction.user.tag}\n\n` +
-                        `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
-                    )
+                    .setDescription(`🟢 Entrada registrada:\n${horaEspaña(ahora)}`)
             ]
         });
     }
 
-    /* =========================
-       RESET SEMANA
-    ========================= */
-
     if (row.semana !== semanaActual) {
-
         row.totalSemanal = 0;
         row.semana = semanaActual;
     }
 
-    /* =========================
-       SALIDA
-    ========================= */
-
     if (row.entrada) {
-
-        const duracion =
-            ahora - row.entrada;
-
-        const nuevoTotal =
-            Number(row.totalSemanal) +
-            duracion;
+        const duracion = ahora - row.entrada;
+        const nuevoTotal = Number(row.totalSemanal) + duracion;
 
         db.prepare(`
             UPDATE usuarios
@@ -399,54 +241,33 @@ client.on('interactionCreate', async interaction => {
                 totalSemanal = ?,
                 semana = ?
             WHERE userId = ?
-        `).run(
-            nuevoTotal,
-            semanaActual,
-            userId
-        );
+        `).run(nuevoTotal, semanaActual, userId);
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
                     .setColor('Blue')
-                    .setTitle('⏱️ Registro de fichaje')
+                    .setTitle('⏱️ Salida registrada')
                     .setDescription(
-                        `👤 ${interaction.user.tag}\n\n` +
-
-                        `🟢 Entrada:\n${horaEspaña(row.entrada)}\n\n` +
-
-                        `🔴 Salida:\n${horaEspaña(ahora)}\n\n` +
-
                         `⏱ Tiempo trabajado: ${formatTiempo(duracion)}\n` +
-
                         `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
                     )
             ]
         });
     }
 
-    /* =========================
-       ENTRADA
-    ========================= */
-
     db.prepare(`
         UPDATE usuarios
         SET entrada = ?
         WHERE userId = ?
-    `).run(
-        ahora,
-        userId
-    );
+    `).run(ahora, userId);
 
-    interaction.reply({
+    return interaction.reply({
         embeds: [
             new EmbedBuilder()
                 .setColor('Green')
-                .setTitle('⏱️ Registro de fichaje')
-                .setDescription(
-                    `👤 ${interaction.user.tag}\n\n` +
-                    `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
-                )
+                .setTitle('🟢 Entrada registrada')
+                .setDescription(`${horaEspaña(ahora)}`)
         ]
     });
 });
