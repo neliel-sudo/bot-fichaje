@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const {
     Client,
     GatewayIntentBits,
@@ -12,16 +10,16 @@ const {
 const Database = require('better-sqlite3');
 
 /* =========================
-   VARIABLES DE ENTORNO
+   VARIABLES RAILWAY
 ========================= */
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-/* 🔥 CHECK CRÍTICO DE TOKEN */
+/* 🔥 CHECK CRÍTICO */
 if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
-    console.log("❌ FALTAN VARIABLES DE ENTORNO");
+    console.log("❌ FALTAN VARIABLES EN RAILWAY");
     console.log("TOKEN:", !!TOKEN);
     console.log("CLIENT_ID:", !!CLIENT_ID);
     console.log("GUILD_ID:", !!GUILD_ID);
@@ -52,7 +50,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 `).run();
 
 /* =========================
-   HORA ESPAÑA
+   FUNCIONES
 ========================= */
 
 function horaEspaña(ms) {
@@ -76,10 +74,6 @@ function horaEspaña(ms) {
     return `📅 ${fecha}\n🕒 ${hora}`;
 }
 
-/* =========================
-   SEMANA
-========================= */
-
 function getWeekNumber() {
     const date = new Date();
     const firstDay = new Date(date.getFullYear(), 0, 1);
@@ -91,10 +85,6 @@ function getWeekNumber() {
     return Math.ceil((days + firstDay.getDay() + 1) / 7);
 }
 
-/* =========================
-   FORMATO TIEMPO
-========================= */
-
 function formatTiempo(ms) {
     const horas = Math.floor(ms / 3600000);
     const minutos = Math.floor((ms % 3600000) / 60000);
@@ -104,10 +94,8 @@ function formatTiempo(ms) {
 }
 
 /* =========================
-   REGISTRO COMANDOS
+   COMANDOS
 ========================= */
-
-const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 const commands = [
     new SlashCommandBuilder()
@@ -123,6 +111,12 @@ const commands = [
         .setDescription('Ver horas semanales')
 ].map(cmd => cmd.toJSON());
 
+/* =========================
+   REGISTRO COMANDOS
+========================= */
+
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+
 (async () => {
     try {
         console.log("🔄 Registrando comandos...");
@@ -134,7 +128,7 @@ const commands = [
 
         console.log("✅ Comandos registrados");
     } catch (err) {
-        console.error("❌ Error registrando comandos:", err);
+        console.error("❌ Error comandos:", err);
     }
 })();
 
@@ -149,27 +143,49 @@ client.on('interactionCreate', async interaction => {
     const ahora = Date.now();
     const semanaActual = getWeekNumber();
 
+    /* =========================
+       ESTADO
+    ========================= */
+
     if (interaction.commandName === 'estado') {
         const usuarios = db.prepare('SELECT * FROM usuarios').all();
 
-        return interaction.reply({
-            content: `Hay ${usuarios.length} usuarios registrados.`,
-            ephemeral: true
-        });
-    }
+        if (!usuarios.length) {
+            return interaction.reply({
+                content: 'No hay usuarios registrados.',
+                ephemeral: true
+            });
+        }
 
-    if (interaction.commandName === 'comprobar-horas-semanales') {
-        const usuarios = db.prepare('SELECT * FROM usuarios').all();
+        let trabajando = '';
+        let libres = '';
 
-        let msg = "";
+        for (const user of usuarios) {
+            let total = Number(user.totalSemanal);
 
-        for (const u of usuarios) {
-            msg += `<@${u.userId}> → ${formatTiempo(u.totalSemanal)}\n`;
+            if (user.semana !== semanaActual) {
+                total = 0;
+            }
+
+            if (user.entrada) {
+                total += (ahora - user.entrada);
+
+                trabajando += `🟢 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
+            } else {
+                libres += `🔴 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
+            }
         }
 
         return interaction.reply({
-            content: msg || "No hay datos",
-            ephemeral: true
+            embeds: [
+                new EmbedBuilder()
+                    .setColor('Orange')
+                    .setTitle('📊 Estado del personal')
+                    .addFields(
+                        { name: '🟢 En servicio', value: trabajando || 'Nadie trabajando', inline: true },
+                        { name: '🔴 Fuera de servicio', value: libres || 'Todos trabajando', inline: true }
+                    )
+            ]
         });
     }
 
@@ -188,10 +204,14 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply("🟢 Entrada registrada");
     }
 
+    if (row.semana !== semanaActual) {
+        row.totalSemanal = 0;
+        row.semana = semanaActual;
+    }
+
     if (row.entrada) {
         const duracion = ahora - row.entrada;
-
-        const nuevoTotal = row.totalSemanal + duracion;
+        const nuevoTotal = Number(row.totalSemanal) + duracion;
 
         db.prepare(`
             UPDATE usuarios
