@@ -10,21 +10,12 @@ const {
 const Database = require('better-sqlite3');
 
 /* =========================
-   VARIABLES RAILWAY
+   CONFIG
 ========================= */
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
-
-/* 🔥 CHECK IMPORTANTE */
-if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
-    console.log("❌ FALTAN VARIABLES EN RAILWAY");
-    console.log("TOKEN:", !!TOKEN);
-    console.log("CLIENT_ID:", !!CLIENT_ID);
-    console.log("GUILD_ID:", !!GUILD_ID);
-    process.exit(1);
-}
 
 /* =========================
    CLIENTE DISCORD
@@ -50,7 +41,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 `).run();
 
 /* =========================
-   FUNCIONES
+   HORA ESPAÑA 🇪🇸 (BONITA)
 ========================= */
 
 function horaEspaña(ms) {
@@ -74,148 +65,96 @@ function horaEspaña(ms) {
     return `📅 ${fecha}\n🕒 ${hora}`;
 }
 
+/* =========================
+   SEMANA
+========================= */
+
 function getWeekNumber() {
     const date = new Date();
     const firstDay = new Date(date.getFullYear(), 0, 1);
-
-    const days = Math.floor(
-        (date - firstDay) / (24 * 60 * 60 * 1000)
-    );
-
+    const days = Math.floor((date - firstDay) / (24 * 60 * 60 * 1000));
     return Math.ceil((days + firstDay.getDay() + 1) / 7);
 }
+
+/* =========================
+   FORMATO TIEMPO
+========================= */
 
 function formatTiempo(ms) {
     const horas = Math.floor(ms / 3600000);
     const minutos = Math.floor((ms % 3600000) / 60000);
     const segundos = Math.floor((ms % 60000) / 1000);
-
-    return `${horas}h ${minutos}m ${segundos}s`;
+    return `${horas} horas, ${minutos} minutos y ${segundos} segundos`;
 }
 
 /* =========================
-   COMANDOS
+   COMANDO
 ========================= */
 
-const commands = [
-    new SlashCommandBuilder()
-        .setName('fichar')
-        .setDescription('Entrar o salir del trabajo'),
-
-    new SlashCommandBuilder()
-        .setName('estado')
-        .setDescription('Ver quién está trabajando'),
-
-    new SlashCommandBuilder()
-        .setName('comprobar-horas-semanales')
-        .setDescription('Ver horas semanales')
-].map(cmd => cmd.toJSON());
-
-/* =========================
-   REGISTRO COMANDOS
-========================= */
+const command = new SlashCommandBuilder()
+    .setName('fichar')
+    .setDescription('Entrar o salir del trabajo');
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
-    try {
-        console.log("🔄 Registrando comandos...");
-
-        await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-            { body: commands }
-        );
-
-        console.log("✅ Comandos registrados");
-    } catch (err) {
-        console.error("❌ Error registrando comandos:", err);
-    }
+    await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+        { body: [command.toJSON()] }
+    );
 })();
 
 /* =========================
-   INTERACCIONES
+   LOGICA
 ========================= */
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName !== 'fichar') return;
 
     const userId = interaction.user.id;
     const ahora = Date.now();
     const semanaActual = getWeekNumber();
 
+    let row = db.prepare(
+        'SELECT * FROM usuarios WHERE userId = ?'
+    ).get(userId);
+
     /* =========================
-       ESTADO
+       PRIMERA VEZ
     ========================= */
 
-    if (interaction.commandName === 'estado') {
-        const usuarios = db.prepare('SELECT * FROM usuarios').all();
-
-        if (!usuarios.length) {
-            return interaction.reply({
-                content: 'No hay usuarios registrados.',
-                ephemeral: true
-            });
-        }
-
-        let trabajando = '';
-        let libres = '';
-
-        for (const user of usuarios) {
-            let total = Number(user.totalSemanal);
-
-            if (user.semana !== semanaActual) {
-                total = 0;
-            }
-
-            if (user.entrada) {
-                total += (ahora - user.entrada);
-
-                trabajando += `🟢 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
-            } else {
-                libres += `🔴 <@${user.userId}>\n⏱ ${formatTiempo(total)}\n\n`;
-            }
-        }
+    if (!row) {
+        db.prepare(`
+            INSERT INTO usuarios(userId, entrada, totalSemanal, semana)
+            VALUES (?, ?, 0, ?)
+        `).run(userId, ahora, semanaActual);
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setColor('Orange')
-                    .setTitle('📊 Estado del personal')
-                    .addFields(
-                        {
-                            name: '🟢 En servicio',
-                            value: trabajando || 'Nadie trabajando',
-                            inline: true
-                        },
-                        {
-                            name: '🔴 Fuera de servicio',
-                            value: libres || 'Todos trabajando',
-                            inline: true
-                        }
+                    .setColor('Green')
+                    .setTitle('⏱️ Registro de fichaje')
+                    .setDescription(
+                        `👤 ${interaction.user.tag}\n\n` +
+                        `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
                     )
             ]
         });
     }
 
     /* =========================
-       FICHAR
+       RESET SEMANA
     ========================= */
-
-    let row = db.prepare('SELECT * FROM usuarios WHERE userId = ?').get(userId);
-
-    if (!row) {
-        db.prepare(`
-            INSERT INTO usuarios (userId, entrada, totalSemanal, semana)
-            VALUES (?, ?, 0, ?)
-        `).run(userId, ahora, semanaActual);
-
-        return interaction.reply("🟢 Entrada registrada");
-    }
 
     if (row.semana !== semanaActual) {
         row.totalSemanal = 0;
         row.semana = semanaActual;
     }
+
+    /* =========================
+       SALIDA
+    ========================= */
 
     if (row.entrada) {
         const duracion = ahora - row.entrada;
@@ -229,8 +168,27 @@ client.on('interactionCreate', async interaction => {
             WHERE userId = ?
         `).run(nuevoTotal, semanaActual, userId);
 
-        return interaction.reply("🔴 Salida registrada");
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor('Blue')
+                    .setTitle('⏱️ Registro de fichaje')
+                    .setDescription(
+                        `👤 ${interaction.user.tag}\n\n` +
+
+                        `🟢 Entrada:\n${horaEspaña(row.entrada)}\n\n` +
+                        `🔴 Salida:\n${horaEspaña(ahora)}\n\n` +
+
+                        `⏱ Tiempo trabajado: ${formatTiempo(duracion)}\n` +
+                        `📊 Total semanal: ${formatTiempo(nuevoTotal)}`
+                    )
+            ]
+        });
     }
+
+    /* =========================
+       ENTRADA
+    ========================= */
 
     db.prepare(`
         UPDATE usuarios
@@ -238,11 +196,23 @@ client.on('interactionCreate', async interaction => {
         WHERE userId = ?
     `).run(ahora, userId);
 
-    return interaction.reply("🟢 Entrada registrada");
+    interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('⏱️ Registro de fichaje')
+                .setDescription(
+                    `👤 ${interaction.user.tag}\n\n` +
+                    `🟢 Entrada registrada:\n${horaEspaña(ahora)}`
+                )
+        ]
+    });
 });
 
 /* =========================
    LOGIN
 ========================= */
+
+client.login(TOKEN);
 
 client.login(TOKEN);
