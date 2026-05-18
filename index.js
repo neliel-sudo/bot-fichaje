@@ -17,7 +17,7 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-/* 🔥 CHECK CRÍTICO */
+/* 🔥 CHECK IMPORTANTE */
 if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
     console.log("❌ FALTAN VARIABLES EN RAILWAY");
     console.log("TOKEN:", !!TOKEN);
@@ -128,7 +128,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 
         console.log("✅ Comandos registrados");
     } catch (err) {
-        console.error("❌ Error comandos:", err);
+        console.error("❌ Error registrando comandos:", err);
     }
 })();
 
@@ -182,8 +182,16 @@ client.on('interactionCreate', async interaction => {
                     .setColor('Orange')
                     .setTitle('📊 Estado del personal')
                     .addFields(
-                        { name: '🟢 En servicio', value: trabajando || 'Nadie trabajando', inline: true },
-                        { name: '🔴 Fuera de servicio', value: libres || 'Todos trabajando', inline: true }
+                        {
+                            name: '🟢 En servicio',
+                            value: trabajando || 'Nadie trabajando',
+                            inline: true
+                        },
+                        {
+                            name: '🔴 Fuera de servicio',
+                            value: libres || 'Todos trabajando',
+                            inline: true
+                        }
                     )
             ]
         });
